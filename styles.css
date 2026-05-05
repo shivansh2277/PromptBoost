@@ -1,0 +1,216 @@
+.promptboost-host {
+  position: relative;
+}
+
+.promptboost-controls {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin: 6px 42px 0 auto;
+  max-width: max-content;
+  position: relative;
+  z-index: 20;
+}
+
+.promptboost-button,
+.promptboost-toggle,
+.promptboost-mode-option {
+  border: 1px solid rgba(142, 142, 160, 0.32);
+  box-shadow: none;
+  cursor: pointer;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
+  white-space: nowrap;
+}
+
+.promptboost-mode-toggle {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(142, 142, 160, 0.26);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 2px;
+  min-height: 30px;
+  padding: 2px;
+}
+
+.promptboost-mode-option {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 999px;
+  color: #565869;
+  min-height: 24px;
+  min-width: 42px;
+  padding: 5px 8px;
+}
+
+.promptboost-mode-option:hover:not(:disabled) {
+  background: rgba(16, 163, 127, 0.08);
+  color: #202123;
+}
+
+.promptboost-mode-option.promptboost-mode-active {
+  background: #202123;
+  border-color: #202123;
+  color: #ffffff;
+}
+
+.promptboost-button {
+  background: #10a37f;
+  border-color: #10a37f;
+  border-radius: 7px;
+  color: #ffffff;
+  min-height: 30px;
+  padding: 8px 11px;
+}
+
+.promptboost-button:hover:not(:disabled) {
+  background: #0d8f70;
+  border-color: #0d8f70;
+}
+
+.promptboost-button:focus-visible,
+.promptboost-toggle:focus-visible,
+.promptboost-mode-option:focus-visible {
+  outline: 2px solid #10a37f;
+  outline-offset: 2px;
+}
+
+.promptboost-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.promptboost-mode-option:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.promptboost-toggle {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  color: #202123;
+  min-height: 30px;
+  min-width: 42px;
+  padding: 8px 10px;
+}
+
+.promptboost-toggle[aria-pressed="true"] {
+  background: #eefaf5;
+  border-color: rgba(16, 163, 127, 0.42);
+  color: #08745b;
+}
+
+.promptboost-toggle[aria-pressed="false"] {
+  background: #f4f4f5;
+  color: #6b7280;
+}
+
+.promptboost-disabled .promptboost-button {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+  color: #6b7280;
+}
+
+.promptboost-toast {
+  background: rgba(32, 33, 35, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  bottom: 92px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
+  color: #ffffff;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  left: 50%;
+  letter-spacing: 0;
+  line-height: 1.35;
+  max-width: min(420px, calc(100vw - 32px));
+  opacity: 1;
+  padding: 10px 12px;
+  pointer-events: none;
+  position: fixed;
+  transform: translateX(-50%);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+  z-index: 2147483647;
+}
+
+.promptboost-toast-hide {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .promptboost-toggle {
+    background: rgba(32, 33, 35, 0.86);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: #ececf1;
+  }
+
+  .promptboost-mode-toggle {
+    background: rgba(32, 33, 35, 0.86);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+
+  .promptboost-mode-option {
+    color: #c5c5d2;
+  }
+
+  .promptboost-mode-option:hover:not(:disabled) {
+    background: rgba(16, 163, 127, 0.14);
+    color: #ececf1;
+  }
+
+  .promptboost-mode-option.promptboost-mode-active {
+    background: #ececf1;
+    border-color: #ececf1;
+    color: #202123;
+  }
+
+  .promptboost-toggle[aria-pressed="true"] {
+    background: rgba(16, 163, 127, 0.16);
+    color: #7ddfc8;
+  }
+
+  .promptboost-toggle[aria-pressed="false"] {
+    background: rgba(64, 65, 79, 0.84);
+    color: #c5c5d2;
+  }
+}
+
+@media (max-width: 640px) {
+  .promptboost-controls {
+    margin-right: 8px;
+  }
+
+  .promptboost-button {
+    min-height: 28px;
+    padding: 7px 9px;
+  }
+
+  .promptboost-toggle {
+    min-height: 28px;
+    min-width: 38px;
+    padding: 7px 8px;
+  }
+
+  .promptboost-mode-toggle {
+    min-height: 28px;
+  }
+
+  .promptboost-mode-option {
+    min-height: 22px;
+    min-width: 36px;
+    padding: 4px 6px;
+  }
+}
