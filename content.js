@@ -454,13 +454,21 @@ function isPromptBoostGeneratedPrompt(text) {
     "Act as an expert teacher who explains concepts clearly.",
     "Act as an expert assistant.",
     "Act as a senior software engineer.",
-    "Act as a patient teacher."
+    "Act as a patient teacher.",
+    "Act as an expert social media copywriter and growth marketer.",
+    "Act as an expert writer and editor.",
+    "Act as a rigorous research analyst.",
+    "Improve this request into a clear, useful prompt:",
+    "Solve this programming problem:",
+    "Explain this simply:",
+    "Create marketing copy for this request:",
+    "Improve or write this clearly:",
+    "Analyze this with a practical, evidence-aware approach:"
   ];
 
   return (
     knownRolePrefixes.some((prefix) => text.startsWith(prefix)) &&
-    text.includes("\n\nTask:") &&
-    text.includes("\n\nOutput format:")
+    (text.includes("\n\nTask:") || text.includes("\n\nReturn:"))
   );
 }
 
@@ -592,4 +600,5 @@ function cleanup() {
   if (scheduledScan) {
     window.clearTimeout(scheduledScan);
   }
+
 }

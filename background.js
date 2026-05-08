@@ -1,11 +1,21 @@
 "use strict";
 
+importScripts("contextDetector.js");
+
 const DEFAULT_SETTINGS = {
   enabled: true,
   mode: "general"
 };
 
 const VALID_MODES = new Set(["general", "coding", "study"]);
+const CONTEXT_LABELS = {
+  coding: "Coding",
+  study: "Study",
+  marketing: "Marketing",
+  writing: "Writing",
+  research: "Research",
+  general: "General"
+};
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.get(DEFAULT_SETTINGS, (stored) => {
@@ -35,6 +45,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
 
     const improvedPrompt = improvePrompt(originalPrompt, message.mode);
+    const contextAnalysis = PromptBoostContext.analyzePromptContext(originalPrompt);
+    const effectiveContext = resolveEffectiveContext(message.mode, contextAnalysis.context);
 
     sendResponse({
       ok: true,
@@ -110,20 +122,48 @@ function isChatGptUrl(url) {
 function improvePrompt(input, mode = "general") {
   const normalized = normalizePrompt(input);
   const selectedMode = normalizeMode(mode);
+  const contextAnalysis = PromptBoostContext.analyzePromptContext(normalized);
+  const effectiveContext = resolveEffectiveContext(selectedMode, contextAnalysis.context);
 
   if (looksAlreadyStructured(normalized)) {
-    return refineStructuredPrompt(normalized, selectedMode);
+    return refineStructuredPrompt(normalized, effectiveContext);
   }
 
-  if (selectedMode === "coding") {
-    return buildCodingPrompt(normalized);
+  return buildEnhancedPrompt(normalized, effectiveContext);
+}
+
+function resolveEffectiveContext(mode, detectedContext) {
+  const selectedMode = normalizeMode(mode);
+
+  if (selectedMode === "coding" || selectedMode === "study") {
+    return selectedMode;
   }
 
-  if (selectedMode === "study") {
-    return buildStudyPrompt(normalized);
+  return CONTEXT_LABELS[detectedContext] ? detectedContext : "general";
+}
+
+function buildEnhancedPrompt(input, context) {
+  if (context === "coding") {
+    return buildCodingPrompt(input);
   }
 
-  return buildGeneralPrompt(normalized);
+  if (context === "study") {
+    return buildStudyPrompt(input);
+  }
+
+  if (context === "marketing") {
+    return buildMarketingPrompt(input);
+  }
+
+  if (context === "writing") {
+    return buildWritingPrompt(input);
+  }
+
+  if (context === "research") {
+    return buildResearchPrompt(input);
+  }
+
+  return buildGeneralPrompt(input);
 }
 
 function normalizeMode(mode) {
@@ -131,26 +171,14 @@ function normalizeMode(mode) {
 }
 
 function buildGeneralPrompt(normalized) {
-  const intent = inferIntent(normalized);
-  const role = inferRole(normalized, intent);
-  const task = buildTask(normalized, intent);
-  const constraints = buildConstraints(normalized, intent);
-  const outputFormat = buildOutputFormat(intent);
-
   return [
-    role,
+    `Improve this request into a clear, useful prompt: "${normalized}".`,
     "",
-    `Task: ${task}`,
+    "Make it specific, structured, and easy to answer. Add helpful assumptions only when details are missing.",
     "",
-    "Context:",
-    "- Use the information in my request as the starting point.",
-    "- If a required detail is missing, make a reasonable assumption and clearly label it.",
-    "",
-    "Constraints:",
-    ...constraints.map((constraint) => `- ${constraint}`),
-    "",
-    "Output format:",
-    ...outputFormat.map((line) => `- ${line}`)
+    "Return:",
+    "- Improved prompt",
+    "- Suggested output format"
   ].join("\n");
 }
 
@@ -158,26 +186,16 @@ function buildCodingPrompt(normalized) {
   const cleaned = stripWeakLeadIn(normalized);
 
   return [
-    "Act as a senior software engineer.",
+    `Solve this programming problem: "${cleaned}".`,
     "",
-    `Task: Solve the following technical problem clearly and correctly: "${cleaned}".`,
+    "Include clean optimized code when relevant, explain the logic, handle edge cases, and follow best practices.",
     "",
-    "Requirements:",
-    "- Provide clean, optimized, production-quality code when code is appropriate.",
-    "- Explain the approach and why it solves the problem.",
-    "- Follow modern best practices for readability, maintainability, and security.",
-    "- Call out assumptions and any missing details.",
-    "",
-    "Edge cases:",
-    "- Identify important edge cases and failure modes.",
-    "- Explain how to test the solution.",
-    "",
-    "Output format:",
+    "Return:",
     "- Approach",
-    "- Code or implementation steps",
+    "- Code",
     "- Explanation",
     "- Edge cases",
-    "- Testing notes"
+    "- Tests"
   ].join("\n");
 }
 
@@ -185,23 +203,62 @@ function buildStudyPrompt(normalized) {
   const cleaned = stripWeakLeadIn(normalized);
 
   return [
-    "Act as a patient teacher.",
+    `Explain this simply: "${cleaned}".`,
     "",
-    `Task: Explain the following concept in a simple and structured way: "${cleaned}".`,
+    "Use a beginner-friendly explanation, step-by-step breakdown, examples or analogies, and a short recap.",
     "",
-    "Teaching requirements:",
-    "- Start with a plain-language explanation.",
-    "- Break the concept down step by step.",
-    "- Include clear examples or analogies where useful.",
-    "- Define important terms before using them deeply.",
-    "- Keep the explanation beginner-friendly without being shallow.",
-    "",
-    "Output format:",
+    "Return:",
     "- Short answer",
-    "- Step-by-step explanation",
+    "- Explanation",
     "- Examples",
-    "- Common mistakes or misconceptions",
-    "- Quick recap"
+    "- Recap"
+  ].join("\n");
+}
+
+function buildMarketingPrompt(normalized) {
+  const cleaned = stripWeakLeadIn(normalized);
+
+  return [
+    `Create marketing copy for this request: "${cleaned}".`,
+    "",
+    "Make it audience-aware, benefit-led, punchy, and optimized for engagement. Include variations when useful.",
+    "",
+    "Return:",
+    "- Hooks",
+    "- Copy options",
+    "- CTA",
+    "- Hashtags or channel notes"
+  ].join("\n");
+}
+
+function buildWritingPrompt(normalized) {
+  const cleaned = stripWeakLeadIn(normalized);
+
+  return [
+    `Improve or write this clearly: "${cleaned}".`,
+    "",
+    "Make it polished, natural, well-structured, and matched to the likely audience and tone.",
+    "",
+    "Return:",
+    "- Polished version",
+    "- Tone notes",
+    "- Optional alternatives"
+  ].join("\n");
+}
+
+function buildResearchPrompt(normalized) {
+  const cleaned = stripWeakLeadIn(normalized);
+
+  return [
+    `Analyze this with a practical, evidence-aware approach: "${cleaned}".`,
+    "",
+    "Compare the key options or viewpoints, separate assumptions from facts, and end with a useful recommendation.",
+    "",
+    "Return:",
+    "- Executive summary",
+    "- Key findings",
+    "- Tradeoffs",
+    "- Recommendation"
   ].join("\n");
 }
 
@@ -223,14 +280,21 @@ function refineStructuredPrompt(prompt, mode = "general") {
   const modeInstruction = {
     general: "Before answering, improve clarity by identifying assumptions, resolving ambiguity where possible, and using a concise, well-organized structure.",
     coding: "Before answering, treat this as a coding task: provide clean code when relevant, explain the approach, include edge cases, and mention testing.",
-    study: "Before answering, treat this as a study task: explain simply, use examples, and break the answer down step by step."
+    study: "Before answering, treat this as a study task: explain simply, use examples, and break the answer down step by step.",
+    marketing: "Before answering, treat this as a marketing task: optimize for audience, hook, benefits, CTA, and engagement.",
+    writing: "Before answering, treat this as a writing task: improve clarity, tone, grammar, structure, and flow.",
+    research: "Before answering, treat this as a research task: compare evidence, assumptions, risks, and practical recommendations."
   };
 
   return [
     prompt,
     "",
-    modeInstruction[normalizeMode(mode)]
+    modeInstruction[normalizePromptContext(mode)]
   ].join("\n");
+}
+
+function normalizePromptContext(context) {
+  return CONTEXT_LABELS[context] ? context : "general";
 }
 
 function inferIntent(prompt) {
