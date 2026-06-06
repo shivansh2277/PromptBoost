@@ -1,97 +1,219 @@
 # PromptBoost
 
-PromptBoost is an AI-powered Chrome extension that transforms weak or vague prompts into structured, high-quality instructions for significantly better AI outputs.
+PromptBoost is a Chrome extension that improves prompts directly inside ChatGPT.
 
-The system analyzes user intent, detects prompt context, and dynamically applies specialized enhancement logic to improve clarity, structure, depth, and response quality.
+Instead of manually writing detailed prompts, users can write naturally and let PromptBoost transform their input into a clearer, more structured prompt designed to produce better AI responses.
 
----
+## Features
 
-## Overview
+### Intelligent Prompt Enhancement
 
-Most users interact with AI using incomplete or low-context prompts such as:
+Converts vague prompts into structured, high-quality instructions.
 
-- "make a website"
-- "write code"
-- "explain osmosis"
-- "write a LinkedIn post"
+Example:
 
-These prompts often produce:
-- generic responses
-- inconsistent outputs
-- missing details
-- poor structure
-- weak reasoning
+**Input**
 
-PromptBoost solves this by automatically converting simple prompts into expert-level AI instructions.
+```text
+write instagram caption for gym
+```
 
----
+**Enhanced Prompt**
 
-## Core Features
+```text
+Write a short, engaging Instagram caption for a gym-related post. Include a strong hook, motivational tone, call to action, and relevant hashtags. Provide 3 caption variations.
+```
 
-### Intent-Aware Prompt Enhancement
+### Context-Aware Prompt Generation
 
-PromptBoost detects the purpose of a prompt and dynamically adapts its enhancement strategy.
+PromptBoost analyzes the user's input and adapts prompt structure based on intent.
 
-Supported categories include:
-- Coding
-- Study
-- Writing
-- Marketing
-- General Productivity
+Supported contexts include:
 
----
+* Coding
+* Study
+* Writing
+* Marketing
+* Research
+* General Productivity
 
-### Adaptive Context Detection
+### Smart Mode Selection
 
-The extension analyzes:
-- user intent
-- task complexity
-- output expectations
-- missing context
-- domain type
+Users can choose from:
 
-and applies specialized prompt optimization logic.
+* General
+* Coding
+* Study
 
----
+General mode automatically adapts to the detected intent whenever possible.
 
-### Structured AI Instructions
+### Task-Specific Optimization
 
-PromptBoost automatically injects:
-- expert role assignment
-- formatting instructions
-- output structure
-- constraints
-- quality standards
-- optimization rules
+PromptBoost differentiates between different types of requests.
 
-This significantly improves AI response quality.
+Examples:
 
----
+**Coding**
 
-### Multi-Mode Enhancement System
+* Debugging
+* Code explanation
+* Feature implementation
+* Optimization
+* Code review
 
-#### General Mode
-Optimized for:
-- productivity
-- brainstorming
-- business
-- writing
-- research
+**Study**
 
-#### Coding Mode
-Optimized for:
-- software engineering
-- debugging
-- architecture design
-- production-quality code
-- AI application development
+* Beginner explanations
+* Exam preparation
+* Quick summaries
+* Concept breakdowns
 
-#### Study Mode
-Optimized for:
-- concept explanations
-- beginner-friendly learning
-- exam preparation
-- structured teaching
-- deep understanding
+**Writing**
 
----
+* Emails
+* LinkedIn posts
+* Articles
+* Rewriting
+* Proofreading
+
+### Local Processing
+
+PromptBoost runs entirely in the browser.
+
+* No backend
+* No API calls
+* No account required
+* No prompt storage
+
+### Privacy Focused
+
+PromptBoost does not:
+
+* Store prompts
+* Send prompts to external servers
+* Track user activity
+
+All processing is performed locally.
+
+## Installation
+
+### Option 1: Download ZIP
+
+1. Download this repository.
+2. Extract the ZIP file.
+3. Open Chrome.
+4. Navigate to:
+
+```text
+chrome://extensions
+```
+
+5. Enable **Developer Mode**.
+6. Click **Load unpacked**.
+7. Select the extracted PromptBoost folder.
+
+The extension is now installed.
+
+### Option 2: Clone Repository
+
+```bash
+git clone https://github.com/shivansh2277/PromptBoost.git
+```
+
+Then load the folder through Chrome Extensions using Developer Mode.
+
+## How to Use
+
+1. Open ChatGPT.
+2. Type your prompt normally.
+3. Select a mode:
+
+   * General
+   * Coding
+   * Study
+4. Click **Improve Prompt**.
+5. Review the enhanced prompt.
+6. Submit it to ChatGPT.
+
+## Examples
+
+### Study
+
+**Input**
+
+```text
+explain photosynthesis
+```
+
+**Output**
+
+```text
+Explain photosynthesis in a simple, beginner-friendly way. Break the process down step by step, include examples, and finish with a short recap.
+```
+
+### Coding
+
+**Input**
+
+```text
+fix python api bug
+```
+
+**Output**
+
+```text
+Debug and fix the Python API issue. Identify the root cause, explain why it occurs, provide the corrected solution, and mention important edge cases.
+```
+
+### Writing
+
+**Input**
+
+```text
+write linkedin post about my project
+```
+
+**Output**
+
+```text
+Write a professional but conversational LinkedIn post about a project. Include a strong opening hook, key insights, lessons learned, and a clear closing call to action.
+```
+
+## Project Goals
+
+PromptBoost aims to:
+
+* Improve AI output quality
+* Reduce prompt engineering complexity
+* Help users communicate intent more clearly
+* Make AI tools easier to use for everyone
+
+## Technology
+
+Built using:
+
+* JavaScript
+* HTML
+* CSS
+* Chrome Extension APIs
+* Manifest V3
+
+## Roadmap
+
+Planned improvements include:
+
+* Better intent understanding
+* Improved multi-step task handling
+* Enhanced multilingual support
+* More specialized prompt generation
+* Additional productivity features
+
+## Contributing
+
+Contributions, suggestions, and feedback are welcome.
+
+If you find a bug or have an idea for improvement, feel free to open an issue or submit a pull request.
+
+## License
+
+MIT License
