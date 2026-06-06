@@ -5,6 +5,8 @@ const PROMPTBOOST_BUTTON_ID = "promptboost-improve-button";
 const PROMPTBOOST_TOGGLE_ID = "promptboost-toggle-button";
 const PROMPTBOOST_MODE_ID = "promptboost-mode-toggle";
 const PROMPTBOOST_TAB_GENERATED_KEY = "promptboost.generatedInThisTab";
+const PROMPTBOOST_TAB_ID_KEY = "promptboost.chromeTabId";
+const PROMPTBOOST_SESSION_KEY = "promptboost.sessionId";
 const COMPOSER_SCAN_INTERVAL_MS = 3000;
 const COMPOSER_SCAN_DEBOUNCE_MS = 500;
 const PROMPTBOOST_MODES = [
@@ -22,20 +24,37 @@ let scanTimer = null;
 let scheduledScan = null;
 let observer = null;
 let staleGeneratedDraftCleanupDone = false;
+let currentTabId = "";
+let composerListenersAttached = false;
 
 initPromptBoost();
 
 function initPromptBoost() {
-  chrome.runtime.sendMessage({ type: "PROMPTBOOST_GET_SETTINGS" }, (response) => {
-    if (!chrome.runtime.lastError && response && response.ok) {
-      enabled = response.settings.enabled !== false;
-      selectedMode = normalizeMode(response.settings.mode);
-    }
+  registerTabSession(() => {
+    chrome.runtime.sendMessage({ type: "PROMPTBOOST_GET_SETTINGS" }, (response) => {
+      if (!chrome.runtime.lastError && response && response.ok) {
+        enabled = response.settings.enabled !== false;
+        selectedMode = normalizeMode(response.settings.mode);
+      }
 
-    mountWhenReady();
-    bindRuntimeMessages();
-    bindKeyboardShortcut();
-    bindStorageUpdates();
+      mountWhenReady();
+      bindRuntimeMessages();
+      bindKeyboardShortcut();
+      bindStorageUpdates();
+      bindSessionGuards();
+    });
+  });
+}
+
+function registerTabSession(done) {
+  chrome.runtime.sendMessage({ type: "PROMPTBOOST_REGISTER_TAB" }, (response) => {
+    const tabId = !chrome.runtime.lastError && response && response.ok && response.tabId
+      ? response.tabId
+      : createLocalSessionId();
+
+    currentTabId = tabId;
+    ensureIsolatedTabState(tabId);
+    done();
   });
 }
 
@@ -70,15 +89,16 @@ function refreshComposer() {
 
   if (composer === currentComposer) {
     clearStaleGeneratedDraft(composer);
+    updateControlsState();
     return;
   }
 
   if (currentComposer) {
-    currentComposer.removeEventListener("input", updateControlsState);
+    detachComposerListeners(currentComposer);
   }
 
   currentComposer = composer;
-  currentComposer.addEventListener("input", updateControlsState);
+  attachComposerListeners(currentComposer);
   mountControls(composer);
   clearStaleGeneratedDraft(composer);
 }
@@ -348,6 +368,26 @@ function bindStorageUpdates() {
   });
 }
 
+function bindSessionGuards() {
+  window.addEventListener("pageshow", () => {
+    registerTabSession(() => {
+      scheduleComposerRefresh();
+    });
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      registerTabSession(() => {
+        refreshComposer();
+      });
+    }
+  });
+
+  document.addEventListener("paste", () => {
+    window.setTimeout(handleComposerActivity, 0);
+  }, true);
+}
+
 function setEnabled(nextEnabled) {
   enabled = nextEnabled;
   updateControlsState();
@@ -393,6 +433,7 @@ function improveCurrentPrompt() {
   }
 
   isImproving = true;
+  setComposerReplacing(currentComposer, true);
   updateControlsState();
 
   chrome.runtime.sendMessage(
@@ -405,12 +446,14 @@ function improveCurrentPrompt() {
       isImproving = false;
 
       if (chrome.runtime.lastError) {
+        setComposerReplacing(currentComposer, false);
         showToast("PromptBoost could not connect. Reload ChatGPT and try again.");
         updateControlsState();
         return;
       }
 
       if (!response || !response.ok) {
+        setComposerReplacing(currentComposer, false);
         showToast((response && response.error) || "PromptBoost could not improve this prompt.");
         updateControlsState();
         return;
@@ -418,6 +461,9 @@ function improveCurrentPrompt() {
 
       markPromptGeneratedInThisTab();
       setComposerText(currentComposer, response.improvedPrompt);
+      window.requestAnimationFrame(() => {
+        setComposerReplacing(currentComposer, false);
+      });
       showToast("Prompt improved.");
       updateControlsState();
     }
@@ -445,7 +491,7 @@ function isPromptBoostGeneratedPrompt(text) {
     return false;
   }
 
-  const knownRolePrefixes = [
+  const legacyPrefixes = [
     "Act as a senior software engineer and technical reviewer.",
     "Act as a professional direct-response copywriter.",
     "Act as an expert editor and content strategist.",
@@ -460,21 +506,57 @@ function isPromptBoostGeneratedPrompt(text) {
     "Act as a rigorous research analyst.",
     "Improve this request into a clear, useful prompt:",
     "Solve this programming problem:",
+    "Solve and optimize this programming task:",
     "Explain this simply:",
     "Create marketing copy for this request:",
+    "Create concise, engaging marketing copy for",
     "Improve or write this clearly:",
+    "Write or improve this text:",
     "Analyze this with a practical, evidence-aware approach:"
   ];
 
+  const generatedSignatures = [
+    ["Debug and fix the", ["Identify the issue", "corrected version"]],
+    ["Explain how the", ["Walk through the logic"]],
+    ["Build ", ["clean, maintainable implementation steps"]],
+    ["Optimize ", ["bottleneck", "improved approach"]],
+    ["Review ", ["correctness", "maintainability"]],
+    ["Solve ", ["efficient, readable code", "testing notes"]],
+    ["Explain ", ["beginner-friendly", "short recap"]],
+    ["Summarize ", ["main points", "revision"]],
+    ["Write a clear, professional email", ["strong subject line"]],
+    ["Write a professional but conversational LinkedIn post", ["opening hook", "closing CTA"]],
+    ["Write ", ["engaging story", "character motivation"]],
+    ["Rewrite ", ["preserving the original meaning"]],
+    ["Proofread and correct", ["grammar", "punctuation"]],
+    ["Write a short, high-engagement social media caption", ["caption variations"]],
+    ["Write direct-response ad copy", ["strong hook", "call to action"]],
+    ["Generate strong hooks", ["multiple variations"]],
+    ["Create concise call-to-action options", ["action-oriented"]],
+    ["Write a compelling product description", ["key benefits"]],
+    ["Create a concise marketing plan", ["positioning angle"]],
+    ["Compare ", ["practical recommendation"]],
+    ["Analyze the pros and cons", ["balanced view"]],
+    ["Analyze ", ["evidence-aware approach"]],
+    ["Develop a practical strategy", ["success metrics"]],
+    ["Create a practical plan", ["next actions"]],
+    ["Create a concise checklist", ["actionable items"]],
+    ["Generate useful ideas", ["Group them by angle"]],
+    ["Help with ", ["clear structure"]]
+  ];
+
   return (
-    knownRolePrefixes.some((prefix) => text.startsWith(prefix)) &&
-    (text.includes("\n\nTask:") || text.includes("\n\nReturn:"))
+    legacyPrefixes.some((prefix) => text.startsWith(prefix)) ||
+    generatedSignatures.some(([prefix, requiredParts]) => {
+      return text.startsWith(prefix) && requiredParts.every((part) => text.includes(part));
+    })
   );
 }
 
 function markPromptGeneratedInThisTab() {
   try {
     window.sessionStorage.setItem(PROMPTBOOST_TAB_GENERATED_KEY, "1");
+    window.sessionStorage.setItem(PROMPTBOOST_TAB_ID_KEY, currentTabId);
   } catch (_error) {
     // Session storage can be unavailable in hardened browser modes.
   }
@@ -486,6 +568,70 @@ function wasPromptGeneratedInThisTab() {
   } catch (_error) {
     return false;
   }
+}
+
+function ensureIsolatedTabState(tabId) {
+  try {
+    const storedTabId = window.sessionStorage.getItem(PROMPTBOOST_TAB_ID_KEY);
+
+    if (storedTabId !== tabId) {
+      window.sessionStorage.removeItem(PROMPTBOOST_TAB_GENERATED_KEY);
+      window.sessionStorage.removeItem(PROMPTBOOST_SESSION_KEY);
+      window.sessionStorage.setItem(PROMPTBOOST_TAB_ID_KEY, tabId);
+      window.sessionStorage.setItem(PROMPTBOOST_SESSION_KEY, createLocalSessionId());
+      staleGeneratedDraftCleanupDone = false;
+    }
+  } catch (_error) {
+    staleGeneratedDraftCleanupDone = false;
+  }
+}
+
+function createLocalSessionId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function attachComposerListeners(composer) {
+  if (!composer || composerListenersAttached) {
+    return;
+  }
+
+  composer.addEventListener("input", handleComposerActivity);
+  composer.addEventListener("beforeinput", handleComposerBeforeInput, true);
+  composer.addEventListener("paste", handleComposerPaste, true);
+  composer.addEventListener("compositionend", handleComposerActivity);
+  composerListenersAttached = true;
+}
+
+function detachComposerListeners(composer) {
+  if (!composer) {
+    return;
+  }
+
+  composer.removeEventListener("input", handleComposerActivity);
+  composer.removeEventListener("beforeinput", handleComposerBeforeInput, true);
+  composer.removeEventListener("paste", handleComposerPaste, true);
+  composer.removeEventListener("compositionend", handleComposerActivity);
+  composerListenersAttached = false;
+}
+
+function handleComposerBeforeInput(event) {
+  if (event.inputType === "insertFromPaste") {
+    window.setTimeout(handleComposerActivity, 0);
+  }
+}
+
+function handleComposerPaste() {
+  window.setTimeout(handleComposerActivity, 0);
+}
+
+function handleComposerActivity() {
+  if (!currentComposer) {
+    refreshComposer();
+    return;
+  }
+
+  clearStaleGeneratedDraft(currentComposer);
+  updateControlsState();
 }
 
 function getComposerText(composer) {
@@ -525,6 +671,19 @@ function setComposerText(composer, text, options = {}) {
   }
 
   replaceContentEditableText(composer, text);
+}
+
+function setComposerReplacing(composer, replacing) {
+  if (!composer) {
+    return;
+  }
+
+  composer.classList.toggle("promptboost-replacing", replacing);
+
+  const host = findComposerHost(composer);
+  if (host) {
+    host.classList.toggle("promptboost-replacing-host", replacing);
+  }
 }
 
 function replaceContentEditableText(element, text) {
@@ -601,4 +760,7 @@ function cleanup() {
     window.clearTimeout(scheduledScan);
   }
 
+  if (currentComposer) {
+    detachComposerListeners(currentComposer);
+  }
 }

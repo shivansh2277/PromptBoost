@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PromptBoost - AI Prompt Improver",
-  "version": "1.3.0",
+  "version": "11.0.0",
   "description": "Improve and structure prompts directly inside ChatGPT before submitting.",
   "permissions": [
     "storage"
